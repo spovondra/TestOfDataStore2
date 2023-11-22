@@ -15,4 +15,7 @@ interface DataDao {
 
     @Query("SELECT * FROM data_table WHERE day = :date LIMIT 1")
     suspend fun getDataByDate(date: Int): DataEntity?
+
+    @Query("SELECT formattedDate FROM data_table")
+    suspend fun getFormattedDates(): Array<String>
 }

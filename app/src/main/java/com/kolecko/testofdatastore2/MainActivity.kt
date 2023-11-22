@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.jjoe64.graphview.DefaultLabelFormatter
 import com.jjoe64.graphview.GraphView
 import com.jjoe64.graphview.helper.StaticLabelsFormatter
 import com.jjoe64.graphview.series.BarGraphSeries
@@ -76,7 +75,7 @@ class MainActivity : AppCompatActivity() {
         return dateFormat.format(calendar.time)
     }
 
-    private fun createGraph(dataEntities: List<DataEntity>) {
+    private suspend fun createGraph(dataEntities: List<DataEntity>, formattedDateStrings: Array<String>) {
         // Vytvoření bodů pro stupnicový graf
         val dataPoints = dataEntities.mapIndexed { index, dataEntity ->
             DataPoint(index.toDouble() + 1, dataEntity.value)
@@ -86,9 +85,9 @@ class MainActivity : AppCompatActivity() {
         val series = BarGraphSeries(dataPoints)
 
         // Nastavení viditelné oblasti grafu
-        val maxX = dataEntities.size.toDouble() + 1
-        graphView.viewport.setMinX(1.0)
-        graphView.viewport.setMaxX(maxX)
+        val maxX = dataEntities.size.toDouble()
+        graphView.viewport.setMinX(0.5)
+        graphView.viewport.setMaxX(maxX + 0.5)
         graphView.viewport.isXAxisBoundsManual = true
 
         // Nastavení viditelné oblasti osy Y
@@ -101,27 +100,27 @@ class MainActivity : AppCompatActivity() {
         graphView.removeAllSeries()
         graphView.addSeries(series)
 
-        /*
-        // Nastavení popisků na ose X pomocí xLabels
-        val xLabels = dataEntities.mapIndexed { index, dataEntity ->
-            index.toDouble() + 1 to SimpleDateFormat("dd.MM").format(dataEntity.day.toLong())
-        }.toMap().toMutableMap().toString()
+        // Ensure there are at least two labels before setting them
+        if (formattedDateStrings.size >= 2) {
+            // Přidání aktuálního data do pole pro popisky na ose X
+            val currentDate = getCurrentDate()
+            val dataEntity = controller.getDataByDate(currentDate)
+            val formattedCurrentDate = dataEntity?.formattedDate ?: ""
+            val allFormattedDates = formattedDateStrings + arrayOf(formattedCurrentDate)
 
-        val staticLabelsFormatter = StaticLabelsFormatter(graphView)
-        staticLabelsFormatter.setHorizontalLabels(xLabels)
-        graphView.gridLabelRenderer.labelFormatter = staticLabelsFormatter
-          */
-        graphView.gridLabelRenderer.numHorizontalLabels = dataEntities.size
-        graphView.gridLabelRenderer.setHorizontalLabelsAngle(45)
-        graphView.gridLabelRenderer.textSize = 20f
+            // Nastavení popisků na ose X pomocí allFormattedDates
+            val staticLabelsFormatter = StaticLabelsFormatter(graphView)
+            staticLabelsFormatter.setHorizontalLabels(allFormattedDates)
+            graphView.gridLabelRenderer.labelFormatter = staticLabelsFormatter
+            graphView.gridLabelRenderer.setHorizontalLabelsAngle(35)
+            graphView.gridLabelRenderer.labelHorizontalHeight = 70
+            graphView.gridLabelRenderer.numHorizontalLabels = allFormattedDates.size
+            graphView.gridLabelRenderer.textSize = 30f
+        }
 
         // Aktualizace TextView s hodnotami na ose Y
         updateYValuesTextView(dataEntities)
     }
-
-
-
-
 
     private fun updateYValuesTextView(dataEntities: List<DataEntity>) {
         val yValuesText = "Y Values: ${dataEntities.joinToString { it.value.toString() }}"
@@ -130,9 +129,10 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun updateGraph() {
         val dataEntities = database.dataDao().getAllData()
+        val formattedDateStrings = database.dataDao().getFormattedDates()
 
         withContext(Dispatchers.Main) {
-            createGraph(dataEntities)
+            createGraph(dataEntities, formattedDateStrings)
         }
     }
 }

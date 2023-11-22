@@ -8,5 +8,7 @@ data class DataEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val day: Int, // Nová položka pro den
-    val value: Double
+    val value: Double,
+    val formattedDate: String // Přidáno pro ukládání formátovaného data (dd.MM)
 )
+
